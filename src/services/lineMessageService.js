@@ -1,7 +1,7 @@
 const line = require('@line/bot-sdk');
 const env = require('../config/env');
 
-const client = new line.Client({
+const client = new line.messagingApi.MessagingApiClient({
   channelAccessToken: env.line.channelAccessToken
 });
 
@@ -68,7 +68,10 @@ async function sendMedicationReminder(userId, timeRound) {
   };
 
   try {
-    await client.pushMessage(userId, message);
+    await client.pushMessage({
+      to: userId,
+      messages: [message]
+    });
     console.log(`Sent medication reminder to ${userId}`);
   } catch (error) {
     console.error(`Error sending medication reminder to ${userId}:`, error.originalError?.response?.data || error.message);
@@ -139,7 +142,10 @@ async function sendSymptomAssessment(userId) {
   };
 
   try {
-    await client.pushMessage(userId, message);
+    await client.pushMessage({
+      to: userId,
+      messages: [message]
+    });
     console.log(`Sent symptom assessment to ${userId}`);
   } catch (error) {
     console.error(`Error sending symptom assessment to ${userId}:`, error.originalError?.response?.data || error.message);
@@ -151,7 +157,10 @@ async function sendSymptomAssessment(userId) {
  */
 async function sendTextMessage(userId, text) {
   try {
-    await client.pushMessage(userId, { type: 'text', text });
+    await client.pushMessage({
+      to: userId,
+      messages: [{ type: 'text', text }]
+    });
   } catch (error) {
     console.error(`Error sending text message to ${userId}:`, error.message);
   }
