@@ -11,6 +11,11 @@ app.get('/', (req, res) => {
   res.send('Medication LINE OA Bot is running!');
 });
 
+// Emergency Call Redirect Route (Bypass LINE Manager validation)
+app.get('/call-1669', (req, res) => {
+  res.redirect('tel:1669');
+});
+
 // LINE Webhook Route
 app.post('/webhook', line.middleware({
   channelAccessToken: env.line.channelAccessToken,
