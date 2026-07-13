@@ -126,12 +126,13 @@ async function getUsersWhoMissedMedication(timeRound) {
     const logs = medsRes.data.values || [];
     
     // Find users who have a log for today and the specific time round
-    const takenUsers = logs
-      .filter(row => row[0] === date && row[1] === timeRound && row[3] === 'taken')
+    // We consider them as "replied" if they pressed either "taken" or "not_taken"
+    const repliedUsers = logs
+      .filter(row => row[0] === date && row[1] === timeRound && (row[3] === 'taken' || row[3] === 'not_taken'))
       .map(row => row[2]);
 
-    // Missed = All Users - Taken Users
-    const missedUsers = userIds.filter(id => !takenUsers.includes(id));
+    // Missed = All Users - Replied Users
+    const missedUsers = userIds.filter(id => !repliedUsers.includes(id));
     
     return missedUsers;
   } catch (error) {
@@ -179,10 +180,86 @@ async function getActivePatients() {
   }
 }
 
+/**
+ * Get dashboard stats
+ */
+async function getDashboardStats() {
+  try {
+    const activeUsers = await getActivePatients();
+    const totalPatients = activeUsers.length;
+    
+    const date = new Date().toISOString().split('T')[0];
+    
+    const medsRes = await sheets.spreadsheets.values.get({
+      spreadsheetId: env.google.spreadsheetId,
+      range: 'Medications!A:E',
+    });
+    const logs = medsRes.data.values || [];
+    
+    const takenToday = new Set(
+      logs
+        .filter(row => row[0] === date && row[3] === 'taken' && activeUsers.includes(row[2]))
+        .map(row => row[2])
+    );
+    
+    return {
+      totalActivePatients: totalPatients,
+      patientsTakenMedsToday: takenToday.size,
+      patientsMissedMedsToday: totalPatients - takenToday.size
+    };
+  } catch (error) {
+    console.error('Error getting dashboard stats:', error);
+    return { totalActivePatients: 0, patientsTakenMedsToday: 0, patientsMissedMedsToday: 0 };
+  }
+}
+
+/**
+ * Get alerts for dashboard
+ */
+async function getAlerts() {
+  try {
+    const activeUsers = await getActivePatients();
+    const date = new Date().toISOString().split('T')[0];
+    
+    const symRes = await sheets.spreadsheets.values.get({
+      spreadsheetId: env.google.spreadsheetId,
+      range: 'Symptoms!A:D',
+    });
+    const symLogs = symRes.data.values || [];
+    
+    const abnormalLogs = symLogs
+      .filter(row => row[0] === date && row[2] === 'abnormal' && activeUsers.includes(row[1]))
+      .map(row => ({ userId: row[1], type: 'abnormal_symptom', time: row[3] }));
+      
+    const medsRes = await sheets.spreadsheets.values.get({
+      spreadsheetId: env.google.spreadsheetId,
+      range: 'Medications!A:E',
+    });
+    const medsLogs = medsRes.data.values || [];
+    
+    const takenToday = new Set(
+      medsLogs
+        .filter(row => row[0] === date && row[3] === 'taken' && activeUsers.includes(row[2]))
+        .map(row => row[2])
+    );
+    
+    const missedTodayLogs = activeUsers
+      .filter(id => !takenToday.has(id))
+      .map(id => ({ userId: id, type: 'missed_medication', time: new Date().toISOString() }));
+      
+    return [...abnormalLogs, ...missedTodayLogs];
+  } catch (error) {
+    console.error('Error getting alerts:', error);
+    return [];
+  }
+}
+
 module.exports = {
   registerPatient,
   logMedication,
   logSymptom,
   getUsersWhoMissedMedication,
-  getActivePatients
+  getActivePatients,
+  getDashboardStats,
+  getAlerts
 };

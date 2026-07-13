@@ -14,6 +14,14 @@ function initJobs() {
   cron.schedule('30 7 * * *', () => sendRepeatReminder('morning'), { timezone: 'Asia/Bangkok' });
   cron.schedule('0 8 * * *', () => sendRepeatReminder('morning'), { timezone: 'Asia/Bangkok' });
 
+  // 3. Repeat Noon Reminders: 11:30, 12:00 every day
+  cron.schedule('30 11 * * *', () => sendRepeatReminder('noon'), { timezone: 'Asia/Bangkok' });
+  cron.schedule('0 12 * * *', () => sendRepeatReminder('noon'), { timezone: 'Asia/Bangkok' });
+
+  // 4. Repeat Evening Reminders: 17:30, 18:00 every day
+  cron.schedule('30 17 * * *', () => sendRepeatReminder('evening'), { timezone: 'Asia/Bangkok' });
+  cron.schedule('0 18 * * *', () => sendRepeatReminder('evening'), { timezone: 'Asia/Bangkok' });
+
   // 3. Symptom Assessment: Every Monday and Thursday at 09:00
   cron.schedule('0 9 * * 1,4', async () => {
     console.log('Running Symptom Assessment Job...');
