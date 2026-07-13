@@ -14,6 +14,13 @@ async function sendMedicationReminder(userId, timeRound) {
     altText: `แจ้งเตือนทานยารอบ${timeRound}`,
     contents: {
       type: 'bubble',
+      hero: {
+        type: 'image',
+        url: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600&q=80',
+        size: 'full',
+        aspectRatio: '20:13',
+        aspectMode: 'cover'
+      },
       body: {
         type: 'box',
         layout: 'vertical',
@@ -47,8 +54,7 @@ async function sendMedicationReminder(userId, timeRound) {
             action: {
               type: 'postback',
               label: 'ทานแล้ว',
-              data: `action=med_${timeRound}&status=taken`,
-              displayText: 'ทานแล้ว'
+              data: `action=med_${timeRound}&status=taken&uid=${userId}`
             }
           },
           {
@@ -58,8 +64,7 @@ async function sendMedicationReminder(userId, timeRound) {
             action: {
               type: 'postback',
               label: 'ยังไม่ทาน',
-              data: `action=med_${timeRound}&status=not_taken`,
-              displayText: 'ยังไม่ทาน'
+              data: `action=med_${timeRound}&status=not_taken&uid=${userId}`
             }
           }
         ]
@@ -87,6 +92,13 @@ async function sendSymptomAssessment(userId) {
     altText: 'แบบประเมินอาการ',
     contents: {
       type: 'bubble',
+      hero: {
+        type: 'image',
+        url: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=600&q=80',
+        size: 'full',
+        aspectRatio: '20:13',
+        aspectMode: 'cover'
+      },
       body: {
         type: 'box',
         layout: 'vertical',
@@ -120,8 +132,7 @@ async function sendSymptomAssessment(userId) {
             action: {
               type: 'postback',
               label: 'ปกติ',
-              data: 'action=symptom&status=normal',
-              displayText: 'ปกติ'
+              data: `action=symptom&status=normal&uid=${userId}`
             }
           },
           {
@@ -132,8 +143,7 @@ async function sendSymptomAssessment(userId) {
             action: {
               type: 'postback',
               label: 'มีอาการ',
-              data: 'action=symptom&status=abnormal',
-              displayText: 'มีอาการผิดปกติ'
+              data: `action=symptom&status=abnormal&uid=${userId}`
             }
           }
         ]
