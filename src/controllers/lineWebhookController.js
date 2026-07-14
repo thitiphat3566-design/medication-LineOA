@@ -37,7 +37,7 @@ async function handleEvent(event) {
         await googleSheetsService.logMedication(userId, timeRound, status);
         
         const replyText = status === 'taken' 
-          ? `บันทึกข้อมูลเรียบร้อย ขอบคุณที่ทานยารอบ${timeRound}ตรงเวลาครับ`
+          ? `บันทึกข้อมูลเรียบร้อย ขอบคุณที่ทานยารอบ ${timeRound} ตรงเวลาครับ`
           : `บันทึกข้อมูลแล้วครับ รบกวนอย่าลืมทานยาเพื่อสุขภาพที่แข็งแรงนะครับ`;
           
         await lineMessageService.sendTextMessage(userId, replyText);
@@ -57,8 +57,15 @@ async function handleEvent(event) {
 
     // (Optional) Handle regular text messages
     if (event.type === 'message' && event.message.type === 'text') {
-      // Echo or ignore
-      // await lineMessageService.sendTextMessage(event.source.userId, "ระบบได้รับข้อความแล้ว แต่ยังไม่สามารถตอบกลับข้อความทั่วไปได้ครับ");
+      const userText = event.message.text;
+      
+      // If user types a keyword related to being sick or reporting symptoms
+      if (userText.includes('แจ้งอาการ') || userText.includes('ผิดปกติ') || userText.includes('ป่วย') || userText.includes('ไม่สบาย')) {
+        await lineMessageService.sendSymptomAssessment(event.source.userId);
+      } else {
+        // We can optionally remind them how to report symptoms if they type something else
+        // await lineMessageService.sendTextMessage(event.source.userId, "ระบบตอบกลับอัตโนมัติ: หากคุณมีอาการผิดปกติ สามารถพิมพ์คำว่า 'แจ้งอาการ' ได้ตลอดเวลาครับ");
+      }
     }
   } catch (error) {
     console.error('Error handling event:', error);
