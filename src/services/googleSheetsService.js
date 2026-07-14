@@ -101,6 +101,48 @@ async function logSymptom(userId, symptomStatus) {
 }
 
 /**
+ * Update the last logged symptom detail for a user today
+ */
+async function updateLastSymptomDetail(userId, detail) {
+  try {
+    const date = new Date().toISOString().split('T')[0];
+    
+    // First, find the row index
+    const res = await sheets.spreadsheets.values.get({
+      spreadsheetId: env.google.spreadsheetId,
+      range: 'Symptoms!A:E',
+    });
+    
+    const rows = res.data.values || [];
+    let targetRowIndex = -1;
+    
+    // Search backwards to find the latest row for this user today with 'abnormal' status
+    for (let i = rows.length - 1; i >= 0; i--) {
+      if (rows[i][0] === date && rows[i][1] === userId && rows[i][2] === 'abnormal') {
+        targetRowIndex = i + 1; // Google Sheets is 1-indexed
+        break;
+      }
+    }
+
+    if (targetRowIndex !== -1) {
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: env.google.spreadsheetId,
+        range: `Symptoms!E${targetRowIndex}`,
+        valueInputOption: 'USER_ENTERED',
+        resource: {
+          values: [[detail]],
+        },
+      });
+      console.log(`Updated symptom detail for ${userId} at row ${targetRowIndex}`);
+    } else {
+      console.log(`Could not find an abnormal symptom log today for ${userId} to update.`);
+    }
+  } catch (error) {
+    console.error('Error updating symptom detail:', error);
+  }
+}
+
+/**
  * Get users who haven't taken medication for a specific round today.
  */
 async function getUsersWhoMissedMedication(timeRound) {
@@ -221,15 +263,20 @@ async function getAlerts() {
     const activeUsers = await getActivePatients();
     const date = new Date().toISOString().split('T')[0];
     
-    const symRes = await sheets.spreadsheets.values.get({
+    const sympRes = await sheets.spreadsheets.values.get({
       spreadsheetId: env.google.spreadsheetId,
-      range: 'Symptoms!A:D',
+      range: 'Symptoms!A:E',
     });
-    const symLogs = symRes.data.values || [];
+    const symptoms = sympRes.data.values || [];
     
-    const abnormalLogs = symLogs
-      .filter(row => row[0] === date && row[2] === 'abnormal' && activeUsers.includes(row[1]))
-      .map(row => ({ userId: row[1], type: 'abnormal_symptom', time: row[3] }));
+    // 1. Abnormal Symptoms Today
+    const abnormalLogs = symptoms.filter(row => row[0] === date && row[2] === 'abnormal' && activeUsers.includes(row[1]));
+    const abnormalAlerts = abnormalLogs.map(row => ({
+      userId: row[1],
+      type: 'abnormal_symptom',
+      time: row[3],
+      detail: row[4] || '' // Column E
+    }));
       
     const medsRes = await sheets.spreadsheets.values.get({
       spreadsheetId: env.google.spreadsheetId,
@@ -261,5 +308,6 @@ module.exports = {
   getUsersWhoMissedMedication,
   getActivePatients,
   getDashboardStats,
-  getAlerts
+  getAlerts,
+  updateLastSymptomDetail
 };

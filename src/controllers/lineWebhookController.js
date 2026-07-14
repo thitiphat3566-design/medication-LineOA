@@ -1,6 +1,9 @@
 const lineMessageService = require('../services/lineMessageService');
 const googleSheetsService = require('../services/googleSheetsService');
 
+// State management for in-memory conversation state
+const userStates = new Map();
+
 async function handleEvent(event) {
   try {
     // 1. Handle Follow Event (User adds Bot)
@@ -46,11 +49,13 @@ async function handleEvent(event) {
         // Handle symptom postback
         await googleSheetsService.logSymptom(userId, status);
         
-        const replyText = status === 'normal'
-          ? 'ยินดีด้วยครับที่คุณมีสุขภาพปกติในวันนี้'
-          : 'ระบบได้บันทึกอาการของคุณแล้ว หากมีอาการรุนแรง แนะนำให้โทร 1669 จากเมนูด้านล่างทันทีครับ';
-          
-        await lineMessageService.sendTextMessage(userId, replyText);
+        if (status === 'normal') {
+          await lineMessageService.sendTextMessage(userId, 'ยินดีด้วยครับที่คุณมีสุขภาพปกติในวันนี้');
+        } else {
+          // Set state to wait for symptom detail
+          userStates.set(userId, 'WAITING_SYMPTOM_DETAIL');
+          await lineMessageService.sendTextMessage(userId, 'คุณมีอาการผิดปกติอย่างไรบ้างครับ? รบกวนพิมพ์อธิบายสั้นๆ ให้พยาบาลทราบครับ');
+        }
       }
       return;
     }
@@ -58,13 +63,23 @@ async function handleEvent(event) {
     // (Optional) Handle regular text messages
     if (event.type === 'message' && event.message.type === 'text') {
       const userText = event.message.text;
+      const userId = event.source.userId;
+      
+      // Check if user is in WAITING_SYMPTOM_DETAIL state
+      if (userStates.get(userId) === 'WAITING_SYMPTOM_DETAIL') {
+        await googleSheetsService.updateLastSymptomDetail(userId, userText);
+        userStates.delete(userId); // Clear state
+        
+        await lineMessageService.sendTextMessage(userId, 'ระบบบันทึกรายละเอียดอาการของคุณเรียบร้อยแล้วครับ หากมีอาการรุนแรง แนะนำให้โทร 1669 ทันทีครับ');
+        return;
+      }
       
       // If user types a keyword related to being sick or reporting symptoms
       if (userText.includes('แจ้งอาการ') || userText.includes('ผิดปกติ') || userText.includes('ป่วย') || userText.includes('ไม่สบาย')) {
-        await lineMessageService.sendSymptomAssessment(event.source.userId);
+        await lineMessageService.sendSymptomAssessment(userId);
       } else {
         // We can optionally remind them how to report symptoms if they type something else
-        // await lineMessageService.sendTextMessage(event.source.userId, "ระบบตอบกลับอัตโนมัติ: หากคุณมีอาการผิดปกติ สามารถพิมพ์คำว่า 'แจ้งอาการ' ได้ตลอดเวลาครับ");
+        // await lineMessageService.sendTextMessage(userId, "ระบบตอบกลับอัตโนมัติ: หากคุณมีอาการผิดปกติ สามารถพิมพ์คำว่า 'แจ้งอาการ' ได้ตลอดเวลาครับ");
       }
     }
   } catch (error) {
