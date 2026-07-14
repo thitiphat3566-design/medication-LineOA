@@ -101,6 +101,11 @@ function App() {
                     {alert.type === 'abnormal_symptom' 
                       ? 'มีอาการผิดปกติ (ต้องการความช่วยเหลือ)' 
                       : 'ขาดประวัติการทานยา'}
+                    {alert.detail && (
+                      <div style={{ fontSize: '0.9rem', color: 'var(--danger)', marginTop: '0.35rem', fontWeight: 500 }}>
+                        รายละเอียด: "{alert.detail}"
+                      </div>
+                    )}
                   </div>
                 </div>
                 
